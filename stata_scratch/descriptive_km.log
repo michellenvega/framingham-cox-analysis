@@ -1,0 +1,374 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      StataNow 18.5
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: 20-user 8-core network, expiring 30 Jun 2026
+Serial number: 501909320975
+  Licensed to: Center for Advanced Research Computing
+               University of Southern California
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do descriptive_km.do 
+
+. * load in the data *
+. use frmgham2.dta, clear
+
+. 
+. * descriptive statistics*
+. // describe
+. // codebook
+. 
+. * ====================================
+. * 3a: TABLE - 1 Descriptive statistics
+. * ====================================
+. 
+. // can format this better in final product
+. 
+. clear
+
+. use frmgham2.dta, clear
+
+. 
+. * ----- Labels -----
+. label define diab 0 "No Diabetes (N=4240)" 1 "Diabetes (N=114)"
+
+. label values diabetes diab
+
+. 
+. label define sexlbl 1 "Male" 2 "Female"
+
+. label values sex sexlbl
+
+. 
+. * create education with missing as category
+. gen educ_cat = educ
+(111 missing values generated)
+
+. replace educ_cat = 5 if missing(educ) // added this to account for missing!!!
+(111 real changes made)
+
+. 
+. label define educlbl2 ///
+>     1 "0–11 years" ///
+>     2 "High school/GED" ///
+>     3 "Some college" ///
+>     4 "College graduate+" ///
+>     5 "Missing"
+
+. label values educ_cat educlbl2
+
+. 
+. label variable age "Age (years)"
+
+. label variable totchol "Total cholesterol (mg/dL)"
+
+. label variable sex "Sex"
+
+. label variable educ_cat "Education"
+
+. 
+. * ----- Table 1 -----
+. dtable age totchol i.sex i.educ_cat, by(diabetes) ///
+>     continuous(age totchol, statistic(mean sd)) ///
+>     nformat(%6.1f) ///
+>     sformat("(%s)" sd)
+
+-------------------------------------------------------------------------------
+                                               diabetic y/n                    
+                          No Diabetes (N=4240) Diabetes (N=114)      Total     
+-------------------------------------------------------------------------------
+N                               4240.0 (97.4%)     114.0 (2.6%) 4354.0 (100.0%)
+Age (years)                         49.7 (8.6)       55.2 (7.6)      49.8 (8.6)
+Total cholesterol (mg/dL)         236.6 (44.3)     248.1 (56.3)    236.9 (44.6)
+Sex                                                                            
+  Male                          1821.0 (42.9%)     57.0 (50.0%)  1878.0 (43.1%)
+  Female                        2419.0 (57.1%)     57.0 (50.0%)  2476.0 (56.9%)
+Education                                                                      
+  0–11 years                    1722.0 (40.6%)     63.0 (55.3%)  1785.0 (41.0%)
+  High school/GED               1244.0 (29.3%)     24.0 (21.1%)  1268.0 (29.1%)
+  Some college                   689.0 (16.2%)     15.0 (13.2%)   704.0 (16.2%)
+  College graduate+              477.0 (11.2%)       9.0 (7.9%)   486.0 (11.2%)
+  Missing                         108.0 (2.5%)       3.0 (2.6%)    111.0 (2.5%)
+-------------------------------------------------------------------------------
+
+. 
+. * ----- Export -----
+. collect export Table1.docx, replace
+(collection DTable exported to file Table1.docx)
+
+. 
+. * ----- Get missing counts for reporting (add manually in table) -----
+. tabulate educ diabetes, missing
+
+      0-11 |
+ years, hs |
+   or ged, |
+some coll, |     diabetic y/n
+coll grad+ | No Diabet  Diabetes  |     Total
+-----------+----------------------+----------
+         1 |     1,722         63 |     1,785 
+         2 |     1,244         24 |     1,268 
+         3 |       689         15 |       704 
+         4 |       477          9 |       486 
+         . |       108          3 |       111 
+-----------+----------------------+----------
+     Total |     4,240        114 |     4,354 
+
+. 
+. 
+. * =================================================
+. * 3b: K-M Survival Curve - Diabetes vs Non-diabetes
+. * =================================================
+. 
+. clear
+
+. use frmgham2.dta, clear
+
+. 
+. stset lasttime, failure(mi_fchd)
+
+Survival-time data settings
+
+         Failure event: mi_fchd!=0 & mi_fchd<.
+Observed time interval: (0, lasttime]
+     Exit on or before: failure
+
+--------------------------------------------------------------------------
+      4,354  total observations
+          0  exclusions
+--------------------------------------------------------------------------
+      4,354  observations remaining, representing
+        651  failures in single-record/single-failure data
+ 87,231.529  total analysis time at risk and under observation
+                                                At risk from t =         0
+                                     Earliest observed entry t =         0
+                                          Last observed exit t =        24
+
+. 
+. * ----- Labels -----
+. label define diab 0 "No Diabetes" 1 "Diabetes"
+
+. label values diabetes diab
+
+. 
+. * ----- Kaplan–Meier curve with risk table -----
+. sts graph, by(diabetes) ///
+>     title("Kaplan–Meier Survival by Diabetes Status", size(medlarge)) ///
+>     xtitle("Time (years)", size(medium)) ///
+>     ytitle("Survival probability", size(medium)) ///
+>     legend(order(1 "No Diabetes" 2 "Diabetes") ///
+>            position(6) ring(0) cols(1) size(small)) ///
+>     risktable(0 5 10 15 20, ///
+>               size(vsmall) ///
+>               title("Number at risk")) ///
+>     xlabel(0(5)20, labsize(small)) ///
+>     ylabel(0(.2)1, labsize(small) angle(horizontal)) ///
+>     plot1opts(lcolor(navy) lwidth(medthick)) ///
+>     plot2opts(lcolor(maroon) lwidth(medthick)) ///
+>     graphregion(color(white)) ///
+>     bgcolor(white)
+
+        Failure _d: mi_fchd
+  Analysis time _t: lasttime
+
+. 
+. * ----- Export figure -----
+. graph export KM_curve.png, replace
+file KM_curve.png written in PNG format
+
+. 
+. 
+. * ================================
+. * PART 3(c)
+. * ================================
+. 
+. clear
+
+. use frmgham2.dta, clear
+
+. 
+. * ----- survival setup -----
+. stset lasttime, failure(mi_fchd)
+
+Survival-time data settings
+
+         Failure event: mi_fchd!=0 & mi_fchd<.
+Observed time interval: (0, lasttime]
+     Exit on or before: failure
+
+--------------------------------------------------------------------------
+      4,354  total observations
+          0  exclusions
+--------------------------------------------------------------------------
+      4,354  observations remaining, representing
+        651  failures in single-record/single-failure data
+ 87,231.529  total analysis time at risk and under observation
+                                                At risk from t =         0
+                                     Earliest observed entry t =         0
+                                          Last observed exit t =        24
+
+. 
+. * labels
+. label define diab 0 "No Diabetes" 1 "Diabetes"
+
+. label values diabetes diab
+
+. 
+. * (i) Median survival + 95% CI
+. * Median is where S(t) = 0.50
+. stci, by(diabetes)
+
+        Failure _d: mi_fchd
+  Analysis time _t: lasttime
+
+             | Number of 
+diabetes     |  subjects         50%      Std. err.    [95% conf. interval]
+-------------+-------------------------------------------------------------
+    No Diabe |      4240           .             .            .          .
+    Diabetes |       114    22.08077             .      17.9713          .
+-------------+-------------------------------------------------------------
+       Total |      4354           .             .            .          .
+
+. * "Median survival was not reached in the non-diabetic group. Among diabetics
+> , median survival was 22.1 years (95% CI: 18.0, not estimable)." *
+. 
+. * (ii) Survival at 5, 10, 15, 20 years + CI
+. sts list, by(diabetes) at(5 10 15 20)
+
+        Failure _d: mi_fchd
+  Analysis time _t: lasttime
+
+Kaplan–Meier survivor function
+By variable: diabetes
+
+              Beg.             Survivor      Std.
+    Time     total     Fail    function     error     [95% conf. int.]
+----------------------------------------------------------------------
+No Diabetes 
+       5      4045       90      0.9785    0.0022     0.9736    0.9825
+      10      3774      104      0.9529    0.0033     0.9459    0.9589
+      15      3408      146      0.9149    0.0044     0.9058    0.9231
+      20      3011      138      0.8764    0.0053     0.8655    0.8864
+Diabetes 
+       5        95       10      0.9062    0.0283     0.8326    0.9484
+      10        79        8      0.8266    0.0373     0.7388    0.8872
+      15        59       13      0.6832    0.0476     0.5797    0.7662
+      20        37        8      0.5729    0.0538     0.4607    0.6701
+----------------------------------------------------------------------
+Note: Survivor function is calculated over full data and evaluated at
+      indicated times; it is not calculated from aggregates shown at left.
+
+. 
+. * (iii) Test differences at each time point
+. * Log-rank test overall (for reference)
+. sts test diabetes
+
+        Failure _d: mi_fchd
+  Analysis time _t: lasttime
+
+Equality of survivor functions
+Log-rank test
+
+            |  Observed       Expected
+diabetes    |    events         events
+------------+-------------------------
+No Diabetes |       607         639.76
+   Diabetes |        44          11.24
+------------+-------------------------
+      Total |       651         651.00
+
+                      chi2(1) =  97.29
+                      Pr>chi2 = 0.0000
+
+. 
+. * Individual time-point comparisons
+. * (use Cox model to estimate hazard difference proxy)
+. foreach t in 5 10 15 20 {
+  2.     di "===== Time = `t' years ====="
+  3.     
+.     * restrict to subjects at risk at time t
+.     gen fail_`t' = (lasttime <= `t' & mi_fchd==1)
+  4.     
+.     logistic fail_`t' diabetes
+  5. }
+===== Time = 5 years =====
+
+Logistic regression                                     Number of obs =  4,354
+                                                        LR chi2(1)    =  13.13
+                                                        Prob > chi2   = 0.0003
+Log likelihood = -469.6479                              Pseudo R2     = 0.0138
+
+------------------------------------------------------------------------------
+      fail_5 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    diabetes |    4.43376   1.542078     4.28   0.000     2.242441    8.766439
+       _cons |   .0216868   .0023106   -35.96   0.000     .0175996    .0267231
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+===== Time = 10 years =====
+
+Logistic regression                                     Number of obs =  4,354
+                                                        LR chi2(1)    =  19.75
+                                                        Prob > chi2   = 0.0000
+Log likelihood = -837.60033                             Pseudo R2     = 0.0116
+
+------------------------------------------------------------------------------
+     fail_10 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    diabetes |   3.910438   1.044709     5.10   0.000      2.31643    6.601334
+       _cons |   .0479486   .0035241   -41.33   0.000      .041516    .0553779
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+===== Time = 15 years =====
+
+Logistic regression                                     Number of obs =  4,354
+                                                        LR chi2(1)    =  35.45
+                                                        Prob > chi2   = 0.0000
+Log likelihood = -1250.6442                             Pseudo R2     = 0.0140
+
+------------------------------------------------------------------------------
+     fail_15 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    diabetes |   4.284196   .9337566     6.68   0.000     2.794774    6.567376
+       _cons |   .0871795   .0049298   -43.15   0.000     .0780335    .0973974
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+===== Time = 20 years =====
+
+Logistic regression                                     Number of obs =  4,354
+                                                        LR chi2(1)    =  40.17
+                                                        Prob > chi2   = 0.0000
+Log likelihood = -1566.5528                             Pseudo R2     = 0.0127
+
+------------------------------------------------------------------------------
+     fail_20 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    diabetes |   4.092552   .8320293     6.93   0.000     2.747528    6.096019
+       _cons |   .1270601   .0061698   -42.49   0.000     .1155252    .1397467
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+. 
+. * Bonferroni threshold
+. display "Bonferroni alpha = 0.01"
+Bonferroni alpha = 0.01
+
+. 
+. 
+. * how to submit it: stata-mp -b do descriptive_km.do *
+. 
+end of do-file

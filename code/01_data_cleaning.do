@@ -54,5 +54,3 @@ keep if inlist(period, 1)
 
 * 2c. Remove individuals who have a survival time of zero from the analysis. n = 4354*
 drop if timemifc_yrs == 0
-
-
