@@ -188,14 +188,7 @@ estat phtest, detail
 stcox i.diabetes log_totchol age, strata(sex) nolog
 estat phtest, detail
 
-stcox i.diabetes log_totchol age, strata(sex) ///
-  tvc(log_totchol) texp(log(_t)) nolog
-
-stcox i.diabetes log_totchol age, strata(sex) tvc(log_totchol) texp(log(_t)) nolog
-
-stcox i.diabetes##c.log_totchol age, strata(sex) nolog
-
-stcox i.diabetes log_totchol age, strata(sex) nolog
+stcox i.diabetes##c.log_totchol age, strata(sex) tvc(log_totchol) texp(log(_t)) nolog
 
 
 
