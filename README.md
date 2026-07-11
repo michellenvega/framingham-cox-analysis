@@ -1,4 +1,4 @@
-# Cardiovascular Risk Modeling — Framingham Heart Study
+# Cardiovascular Risk Modeling: Framingham Heart Study
 
 ## Overview
 Longitudinal survival analysis examining the contribution of diabetes 
